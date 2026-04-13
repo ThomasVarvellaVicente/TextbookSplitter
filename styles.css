@@ -1,0 +1,17 @@
+/* Add smooth transitions for buttons */
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Custom scrollbar for the JSON textarea */
+textarea::-webkit-scrollbar {
+    width: 8px;
+}
+textarea::-webkit-scrollbar-track {
+    background: #334155;
+}
+textarea::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 4px;
+}

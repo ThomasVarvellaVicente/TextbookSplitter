@@ -3,41 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AITools | Chapter Splitter</title>
+    <title>ankIMAT | Textbook Splitter</title>
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-6">
-    <div class="max-w-3xl w-full bg-slate-800 rounded-xl shadow-2xl p-8 border border-slate-700">
-        <header class="mb-8">
-            <h1 class="text-3xl font-bold text-blue-400">ankIMAT Splitter</h1>
-            <p class="text-slate-400">Transform your textbook into study-sized chapters.</p>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-4xl w-full bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-700">
+        <header class="mb-10 text-center">
+            <h1 class="text-4xl font-extrabold text-blue-500 tracking-tight">ankIMAT Splitter</h1>
+            <p class="text-slate-400 mt-2">Precision PDF chapter extraction for medical students.</p>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="space-y-4">
-                <label class="block text-sm font-medium">1. Upload Textbook (PDF)</label>
-                <input type="file" id="pdfInput" accept=".pdf" class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer">
-                
-                <label class="block text-sm font-medium">2. Consistent Page Offset</label>
-                <input type="number" id="offsetInput" value="28" class="w-full bg-slate-700 border border-slate-600 rounded-md p-2 focus:ring-2 focus:ring-blue-500 outline-none">
-                <p class="text-xs text-slate-500">Page 1 of book = Page 29 of PDF (Offset 28)</p>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-1 space-y-6">
+                <div class="bg-slate-700/30 p-4 rounded-xl border border-slate-600">
+                    <label class="block text-sm font-semibold mb-2 text-blue-300">1. Source File</label>
+                    <input type="file" id="pdfInput" accept=".pdf" class="w-full text-sm text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer">
+                </div>
+
+                <div class="bg-slate-700/30 p-4 rounded-xl border border-slate-600">
+                    <label class="block text-sm font-semibold mb-2 text-blue-300">2. Global Offset</label>
+                    <input type="number" id="offsetInput" value="28" class="w-full bg-slate-800 border border-slate-600 rounded-md p-2 text-white outline-none focus:ring-2 focus:ring-blue-500">
+                    <p class="text-[10px] text-slate-500 mt-2 italic">Ex: If Book Page 1 is PDF Page 29, use Offset 28.</p>
+                </div>
             </div>
 
-            <div class="space-y-4">
-                <label class="block text-sm font-medium">3. Chapter JSON</label>
-                <textarea id="jsonInput" placeholder='[{"title": "Chapter_1", "start": 1, "end": 20}]' class="w-full h-32 bg-slate-700 border border-slate-600 rounded-md p-3 text-mono text-xs focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+            <div class="lg:col-span-2 space-y-4">
+                <div class="flex justify-between items-center">
+                    <label class="text-sm font-semibold text-blue-300 uppercase tracking-wider">3. Define Chapters</label>
+                    <button id="addChapterBtn" class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 text-xs font-bold py-1 px-4 rounded-full border border-blue-500/50 transition">
+                        + Add Row
+                    </button>
+                </div>
+                
+                <div id="chapterList" class="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                    </div>
             </div>
         </div>
 
-        <button id="processBtn" class="w-full mt-8 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-md transition duration-200 flex items-center justify-center gap-2">
-            Generate & Download .ZIP
-        </button>
-
-        <div id="status" class="mt-4 text-center text-sm font-medium hidden"></div>
+        <div class="mt-10 border-t border-slate-700 pt-6">
+            <button id="processBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl transition duration-300 shadow-lg shadow-blue-900/20 flex items-center justify-center gap-3">
+                <span id="btnText">Split & Export ZIP</span>
+            </button>
+            <div id="status" class="mt-4 text-center text-sm font-medium animate-pulse hidden"></div>
+        </div>
     </div>
+
     <script src="script.js"></script>
 </body>
 </html>

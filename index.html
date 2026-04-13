@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ankIMAT | Chapter Splitter</title>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-6">
+    <div class="max-w-3xl w-full bg-slate-800 rounded-xl shadow-2xl p-8 border border-slate-700">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-blue-400">ankIMAT Splitter</h1>
+            <p class="text-slate-400">Transform your textbook into study-sized chapters.</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-4">
+                <label class="block text-sm font-medium">1. Upload Textbook (PDF)</label>
+                <input type="file" id="pdfInput" accept=".pdf" class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer">
+                
+                <label class="block text-sm font-medium">2. Consistent Page Offset</label>
+                <input type="number" id="offsetInput" value="28" class="w-full bg-slate-700 border border-slate-600 rounded-md p-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                <p class="text-xs text-slate-500">Page 1 of book = Page 29 of PDF (Offset 28)</p>
+            </div>
+
+            <div class="space-y-4">
+                <label class="block text-sm font-medium">3. Chapter JSON</label>
+                <textarea id="jsonInput" placeholder='[{"title": "Chapter_1", "start": 1, "end": 20}]' class="w-full h-32 bg-slate-700 border border-slate-600 rounded-md p-3 text-mono text-xs focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+            </div>
+        </div>
+
+        <button id="processBtn" class="w-full mt-8 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-md transition duration-200 flex items-center justify-center gap-2">
+            Generate & Download .ZIP
+        </button>
+
+        <div id="status" class="mt-4 text-center text-sm font-medium hidden"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

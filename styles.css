@@ -1,17 +1,31 @@
-/* Add smooth transitions for buttons */
-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+/* Custom Scrollbar for the Chapter List */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #1e293b;
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #475569;
 }
 
-/* Custom scrollbar for the JSON textarea */
-textarea::-webkit-scrollbar {
-    width: 8px;
+/* Row animations */
+.chapter-row {
+    animation: fadeIn 0.3s ease-out;
 }
-textarea::-webkit-scrollbar-track {
-    background: #334155;
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
-textarea::-webkit-scrollbar-thumb {
-    background: #475569;
-    border-radius: 4px;
+
+button:disabled {
+    cursor: not-allowed;
+    filter: grayscale(1);
+    opacity: 0.6;
 }

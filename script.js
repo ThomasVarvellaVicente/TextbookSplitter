@@ -1,112 +1,144 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const chapterList = document.getElementById('chapterList');
-    const addChapterBtn = document.getElementById('addChapterBtn');
-    const processBtn = document.getElementById('processBtn');
-    const status = document.getElementById('status');
-    const btnText = document.getElementById('btnText');
+let cards = [];
+let imageMap = {};
 
-    // Function to create a new input row
-    function createChapterRow() {
-        console.log("Adding new chapter row..."); // Debugging line
-        const div = document.createElement('div');
-        div.className = "chapter-row grid grid-cols-12 gap-3 bg-slate-700/40 p-3 rounded-lg border border-slate-600 items-center transition-all hover:border-slate-500";
-        div.innerHTML = `
-            <div class="col-span-6">
-                <input type="text" placeholder="Chapter Title" class="chap-title w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm outline-none focus:border-blue-500">
-            </div>
-            <div class="col-span-2">
-                <input type="number" placeholder="Start" class="chap-start w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm outline-none focus:border-blue-500">
-            </div>
-            <div class="col-span-2">
-                <input type="number" placeholder="End" class="chap-end w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm outline-none focus:border-blue-500">
-            </div>
-            <div class="col-span-2 text-right">
-                <button class="delete-row text-slate-500 hover:text-red-400 transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-                    </svg>
-                </button>
-            </div>
-        `;
-        
-        // Handle deletion
-        div.querySelector('.delete-row').addEventListener('click', () => div.remove());
-        
-        chapterList.appendChild(div);
+// --- STAGE 1: PROCESSING DATA ---
+document.getElementById('process-btn').addEventListener('click', () => {
+    const text = document.getElementById('raw-input').value;
+    if (!text.trim()) return alert("Please paste data first.");
+
+    const lines = text.split('\n');
+    
+    // Parses lines containing the '|' separator
+    cards = lines.filter(line => line.includes('|')).map((line, index) => {
+        const parts = line.split('|').map(p => p.trim());
+        return {
+            id: Date.now() + index,
+            front: parts[0] ? parts[0].replace(/Front:\s*/i, '').trim() : '',
+            back: parts[1] ? parts[1].replace(/Back:\s*/i, '').trim() : '',
+            type: parts[2] ? parts[2].replace(/Type:\s*/i, '').trim() : 'String',
+            tags: parts[3] ? parts[3].replace(/Tags:\s*/i, '').trim() : 'General'
+        };
+    });
+
+    if (cards.length === 0) {
+        return alert("No valid cards found. Make sure your data uses the 'Front | Back' format.");
     }
 
-    // Initialize with 3 rows
-    for(let i=0; i<3; i++) createChapterRow();
+    renderSiftingStage();
+});
 
-    // Event Listener for the Add Button
-    addChapterBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        createChapterRow();
+// --- STAGE 2: HANDLING IMAGES ---
+document.getElementById('image-upload').addEventListener('change', (e) => {
+    const files = e.target.files;
+    for (let file of files) {
+        imageMap[file.name] = file;
+    }
+    document.getElementById('file-list-count').innerText = `${Object.keys(imageMap).length} images mapped.`;
+});
+
+// --- STAGE 3: UI RENDERING ---
+function renderSiftingStage() {
+    document.getElementById('upload-stage').classList.add('hidden');
+    document.getElementById('sift-stage').classList.remove('hidden');
+    
+    const grid = document.getElementById('card-grid');
+    grid.innerHTML = '';
+    
+    cards.forEach(card => {
+        const cardEl = document.createElement('div');
+        cardEl.className = 'flashcard';
+        
+        // Check if an image matches the text on the card
+        let imgHtml = '';
+        const possibleImg = imageMap[card.front] || imageMap[card.back];
+        if (possibleImg) {
+            const url = URL.createObjectURL(possibleImg);
+            imgHtml = `<img src="${url}" class="card-preview-img" style="max-width:100%; margin-top:10px; border-radius:4px;">`;
+        }
+
+        cardEl.innerHTML = `
+            <button class="delete-btn" onclick="deleteCard(${card.id})" style="float:right; cursor:pointer;">✕</button>
+            <div class="card-type" style="font-weight:bold; color:#666; font-size:12px;">${card.type.toUpperCase()}</div>
+            <input type="text" value="${card.front}" onchange="updateCard(${card.id}, 'front', this.value)" style="width:90%; margin:5px 0;">
+            <textarea onchange="updateCard(${card.id}, 'back', this.value)" style="width:90%; min-height:60px;">${card.back}</textarea>
+            ${imgHtml}
+            <div style="font-size:10px; color:#aaa; margin-top:5px">#${card.tags}</div>
+        `;
+        grid.appendChild(cardEl);
     });
+    
+    document.getElementById('card-count').innerText = cards.length;
+}
 
-    // --- PDF Processing Logic ---
-    processBtn.addEventListener('click', async () => {
-        const fileInput = document.getElementById('pdfInput');
-        const offset = parseInt(document.getElementById('offsetInput').value) || 0;
-        const rows = document.querySelectorAll('.chapter-row');
+// Global functions for the UI buttons
+window.updateCard = (id, field, value) => {
+    const card = cards.find(c => c.id === id);
+    if (card) card[field] = value;
+};
 
-        if (!fileInput.files[0] || rows.length === 0) {
-            alert("Upload a PDF and add at least one chapter.");
-            return;
-        }
+window.deleteCard = (id) => {
+    cards = cards.filter(c => c.id !== id);
+    renderSiftingStage();
+};
 
-        const chapters = Array.from(rows).map(row => ({
-            title: row.querySelector('.chap-title').value.trim() || 'Untitled_Chapter',
-            start: parseInt(row.querySelector('.chap-start').value),
-            end: parseInt(row.querySelector('.chap-end').value)
-        })).filter(c => !isNaN(c.start) && !isNaN(c.end));
+// --- STAGE 4: EXPORTING THE DECK ---
+document.getElementById('export-btn').addEventListener('click', async () => {
+    if (cards.length === 0) return alert("No cards to export.");
+    if (!window.SQL) return alert("The database engine is still loading. Please wait 3 seconds and try again.");
 
-        if (chapters.length === 0) {
-            alert("Please fill in start and end pages.");
-            return;
-        }
+    // SAFETY: Catch both common library names used by CDNs
+    const Anki = window.genanki || window.GenAnki;
+    if (!Anki) return alert("Anki library not loaded. Check your internet connection.");
 
-        status.classList.remove('hidden');
-        processBtn.disabled = true;
-        btnText.innerText = "Processing...";
+    try {
+        const model = new Anki.Model({
+            name: "EAP_Model",
+            id: "1616161616",
+            flds: [{ name: "Front" }, { name: "Back" }, { name: "Media" }],
+            tmpls: [{
+                name: "Default",
+                qfmt: '<div style="text-align:center; font-family: Arial; font-size:24px;">{{Front}}</div><div style="margin-top:20px; text-align:center;">{{Media}}</div>',
+                afmt: '{{FrontSide}}<hr id="answer"><div style="text-align:center; font-family: Arial; font-size:20px;">{{Back}}</div>',
+            }],
+        });
 
-        try {
-            const existingPdfBytes = await fileInput.files[0].arrayBuffer();
-            const pdfDoc = await PDFLib.PDFDocument.load(existingPdfBytes);
-            const zip = new JSZip();
+        const deck = new Anki.Deck(Date.now(), "EAP Generated Deck");
 
-            for (const chap of chapters) {
-                status.innerText = `Extracting: ${chap.title}`;
-                const newPdf = await PDFLib.PDFDocument.create();
-                
-                const startIdx = (chap.start + offset) - 1;
-                const endIdx = (chap.end + offset) - 1;
-
-                if (startIdx < 0 || endIdx >= pdfDoc.getPageCount()) continue;
-
-                const pageIndices = Array.from({ length: endIdx - startIdx + 1 }, (_, i) => startIdx + i);
-                const copiedPages = await newPdf.copyPages(pdfDoc, pageIndices);
-                copiedPages.forEach(p => newPdf.addPage(p));
-
-                const pdfBytes = await newPdf.save();
-                zip.file(`${chap.title.replace(/[^a-z0-9]/gi, '_')}.pdf`, pdfBytes);
+        cards.forEach(card => {
+            let mediaTag = "";
+            // Logic to embed images in the card if the filename matches the text
+            if (imageMap[card.front]) {
+                mediaTag = `<img src="${card.front}">`;
+            } else if (imageMap[card.back]) {
+                mediaTag = `<img src="${card.back}">`;
             }
 
-            status.innerText = "Building ZIP...";
-            const zipBlob = await zip.generateAsync({ type: "blob" });
-            const url = window.URL.createObjectURL(zipBlob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `ankIMAT_Split_Textbook.zip`;
-            a.click();
-            
-            status.innerText = "Success! Chapters exported.";
-        } catch (err) {
-            console.error(err);
-            status.innerText = "Error. Check console.";
-        } finally {
-            processBtn.disabled = false;
-            btnText.innerText = "Split & Export ZIP";
-        }
-    });
+            deck.addNote(model.note([card.front, card.back, mediaTag], [card.tags]));
+        });
+
+        const pkg = new Anki.Package();
+        pkg.addDeck(deck);
+        
+        // Add the actual image data to the package
+        Object.keys(imageMap).forEach(name => {
+            pkg.addMedia(imageMap[name], name);
+        });
+
+        const zip = await pkg.writeToFile();
+        const blob = new Blob([zip], { type: "application/octet-stream" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "EAP_Study_Deck.apkg";
+        link.click();
+        
+    } catch (err) {
+        console.error("Export Error:", err);
+        alert("An error occurred while generating the deck: " + err.message);
+    }
+});
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+    if (confirm("Are you sure you want to start over? All current cards will be lost.")) {
+        location.reload();
+    }
 });

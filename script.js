@@ -1,144 +1,83 @@
-let cards = [];
-let imageMap = {};
+const pdfInput = document.getElementById('pdfInput');
+const offsetInput = document.getElementById('offsetInput');
+const chapterList = document.getElementById('chapterList');
+const addChapterBtn = document.getElementById('addChapterBtn');
+const processBtn = document.getElementById('processBtn');
+const status = document.getElementById('status');
 
-// --- STAGE 1: PROCESSING DATA ---
-document.getElementById('process-btn').addEventListener('click', () => {
-    const text = document.getElementById('raw-input').value;
-    if (!text.trim()) return alert("Please paste data first.");
-
-    const lines = text.split('\n');
+// 1. Function to create a new chapter row
+function createChapterRow() {
+    const div = document.createElement('div');
+    div.className = "flex gap-2 items-center bg-slate-700/50 p-3 rounded-lg border border-slate-600 animate-in fade-in slide-in-from-left-2";
     
-    // Parses lines containing the '|' separator
-    cards = lines.filter(line => line.includes('|')).map((line, index) => {
-        const parts = line.split('|').map(p => p.trim());
-        return {
-            id: Date.now() + index,
-            front: parts[0] ? parts[0].replace(/Front:\s*/i, '').trim() : '',
-            back: parts[1] ? parts[1].replace(/Back:\s*/i, '').trim() : '',
-            type: parts[2] ? parts[2].replace(/Type:\s*/i, '').trim() : 'String',
-            tags: parts[3] ? parts[3].replace(/Tags:\s*/i, '').trim() : 'General'
-        };
-    });
-
-    if (cards.length === 0) {
-        return alert("No valid cards found. Make sure your data uses the 'Front | Back' format.");
-    }
-
-    renderSiftingStage();
-});
-
-// --- STAGE 2: HANDLING IMAGES ---
-document.getElementById('image-upload').addEventListener('change', (e) => {
-    const files = e.target.files;
-    for (let file of files) {
-        imageMap[file.name] = file;
-    }
-    document.getElementById('file-list-count').innerText = `${Object.keys(imageMap).length} images mapped.`;
-});
-
-// --- STAGE 3: UI RENDERING ---
-function renderSiftingStage() {
-    document.getElementById('upload-stage').classList.add('hidden');
-    document.getElementById('sift-stage').classList.remove('hidden');
-    
-    const grid = document.getElementById('card-grid');
-    grid.innerHTML = '';
-    
-    cards.forEach(card => {
-        const cardEl = document.createElement('div');
-        cardEl.className = 'flashcard';
-        
-        // Check if an image matches the text on the card
-        let imgHtml = '';
-        const possibleImg = imageMap[card.front] || imageMap[card.back];
-        if (possibleImg) {
-            const url = URL.createObjectURL(possibleImg);
-            imgHtml = `<img src="${url}" class="card-preview-img" style="max-width:100%; margin-top:10px; border-radius:4px;">`;
-        }
-
-        cardEl.innerHTML = `
-            <button class="delete-btn" onclick="deleteCard(${card.id})" style="float:right; cursor:pointer;">✕</button>
-            <div class="card-type" style="font-weight:bold; color:#666; font-size:12px;">${card.type.toUpperCase()}</div>
-            <input type="text" value="${card.front}" onchange="updateCard(${card.id}, 'front', this.value)" style="width:90%; margin:5px 0;">
-            <textarea onchange="updateCard(${card.id}, 'back', this.value)" style="width:90%; min-height:60px;">${card.back}</textarea>
-            ${imgHtml}
-            <div style="font-size:10px; color:#aaa; margin-top:5px">#${card.tags}</div>
-        `;
-        grid.appendChild(cardEl);
-    });
-    
-    document.getElementById('card-count').innerText = cards.length;
+    div.innerHTML = `
+        <input type="text" placeholder="Chapter Name" class="flex-1 bg-slate-800 border border-slate-600 rounded p-2 text-sm text-white outline-none focus:border-blue-500">
+        <input type="number" placeholder="Start" class="w-20 bg-slate-800 border border-slate-600 rounded p-2 text-sm text-white outline-none focus:border-blue-500">
+        <input type="number" placeholder="End" class="w-20 bg-slate-800 border border-slate-600 rounded p-2 text-sm text-white outline-none focus:border-blue-500">
+        <button class="text-red-400 hover:text-red-300 px-2 font-bold" onclick="this.parentElement.remove()">✕</button>
+    `;
+    chapterList.appendChild(div);
 }
 
-// Global functions for the UI buttons
-window.updateCard = (id, field, value) => {
-    const card = cards.find(c => c.id === id);
-    if (card) card[field] = value;
-};
+// 2. Initialize with one row and handle "Add Row" button
+addChapterBtn.addEventListener('click', createChapterRow);
+window.onload = createChapterRow; // Adds first row automatically
 
-window.deleteCard = (id) => {
-    cards = cards.filter(c => c.id !== id);
-    renderSiftingStage();
-};
+// 3. The Splitting Logic
+processBtn.addEventListener('click', async () => {
+    const file = pdfInput.files[0];
+    if (!file) return alert("Please select a PDF file first.");
 
-// --- STAGE 4: EXPORTING THE DECK ---
-document.getElementById('export-btn').addEventListener('click', async () => {
-    if (cards.length === 0) return alert("No cards to export.");
-    if (!window.SQL) return alert("The database engine is still loading. Please wait 3 seconds and try again.");
+    const offset = parseInt(offsetInput.value) || 0;
+    const rows = chapterList.querySelectorAll('div');
+    
+    if (rows.length === 0) return alert("Please add at least one chapter.");
 
-    // SAFETY: Catch both common library names used by CDNs
-    const Anki = window.genanki || window.GenAnki;
-    if (!Anki) return alert("Anki library not loaded. Check your internet connection.");
-
+    status.classList.remove('hidden');
+    status.innerText = "Processing PDF chapters...";
+    
     try {
-        const model = new Anki.Model({
-            name: "EAP_Model",
-            id: "1616161616",
-            flds: [{ name: "Front" }, { name: "Back" }, { name: "Media" }],
-            tmpls: [{
-                name: "Default",
-                qfmt: '<div style="text-align:center; font-family: Arial; font-size:24px;">{{Front}}</div><div style="margin-top:20px; text-align:center;">{{Media}}</div>',
-                afmt: '{{FrontSide}}<hr id="answer"><div style="text-align:center; font-family: Arial; font-size:20px;">{{Back}}</div>',
-            }],
-        });
+        const existingPdfBytes = await file.arrayBuffer();
+        const pdfDoc = await PDFLib.PDFDocument.load(existingPdfBytes);
+        const zip = new JSZip();
 
-        const deck = new Anki.Deck(Date.now(), "EAP Generated Deck");
+        for (const row of rows) {
+            const inputs = row.querySelectorAll('input');
+            const name = inputs[0].value || `Chapter_${Date.now()}`;
+            const start = parseInt(inputs[1].value);
+            const end = parseInt(inputs[2].value);
 
-        cards.forEach(card => {
-            let mediaTag = "";
-            // Logic to embed images in the card if the filename matches the text
-            if (imageMap[card.front]) {
-                mediaTag = `<img src="${card.front}">`;
-            } else if (imageMap[card.back]) {
-                mediaTag = `<img src="${card.back}">`;
-            }
+            if (isNaN(start) || isNaN(end)) continue;
 
-            deck.addNote(model.note([card.front, card.back, mediaTag], [card.tags]));
-        });
+            // Create new PDF for this chapter
+            const subDoc = await PDFLib.PDFDocument.create();
+            
+            // Adjust for offset (Human page number to 0-indexed PDF page)
+            const startIdx = (start + offset) - 1;
+            const endIdx = (end + offset) - 1;
 
-        const pkg = new Anki.Package();
-        pkg.addDeck(deck);
-        
-        // Add the actual image data to the package
-        Object.keys(imageMap).forEach(name => {
-            pkg.addMedia(imageMap[name], name);
-        });
+            const pages = await subDoc.copyPages(pdfDoc, 
+                Array.from({length: endIdx - startIdx + 1}, (_, i) => startIdx + i)
+            );
+            
+            pages.forEach(page => subDoc.addPage(page));
+            
+            const pdfBytes = await subDoc.save();
+            zip.file(`${name}.pdf`, pdfBytes);
+        }
 
-        const zip = await pkg.writeToFile();
-        const blob = new Blob([zip], { type: "application/octet-stream" });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = "EAP_Study_Deck.apkg";
+        const content = await zip.generateAsync({type: "blob"});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(content);
+        link.download = "split_textbook.zip";
         link.click();
+
+        status.innerText = "Export Complete!";
+        setTimeout(() => status.classList.add('hidden'), 3000);
         
     } catch (err) {
-        console.error("Export Error:", err);
-        alert("An error occurred while generating the deck: " + err.message);
-    }
-});
-
-document.getElementById('reset-btn').addEventListener('click', () => {
-    if (confirm("Are you sure you want to start over? All current cards will be lost.")) {
-        location.reload();
+        console.error(err);
+        alert("Error processing PDF. Check console for details.");
+        status.classList.add('hidden');
     }
 });
